@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+.ruff_cache/
+.pytest_cache/
+# Generated: re-creatable with `python run_mutation.py` / `run_model.py`.
+# The logs are the reported output and are kept.
+results/*.jsonl

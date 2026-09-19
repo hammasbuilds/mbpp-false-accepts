@@ -1,0 +1,58 @@
+problems: 427  split: sanitized
+reference solutions passing their own tests: 427/427  (7s)
+mutants to run: 1979
+ran in 66s
+
+searching for separating inputs on 310 survivors...
+  done in 23s
+
+======================================================================
+MUTATION SURVIVAL - wrong code that MBPP's 3 asserts accept
+======================================================================
+  mutants run       : 1979
+  SURVIVED (passed) : 316  (16.0%)  <- false accepts
+  killed            : 1663  (84.0%)
+
+  how the killed ones died:
+    fail      1429  (72.2%)
+    error      211  (10.7%)
+    timeout     23  ( 1.2%)
+
+  of those killed, 85.9% failed an assert; the rest crashed or hung,
+  which the suite catches without actually testing for it.
+
+  survival by mutation kind:
+    const          833  survived  22.8%  ######
+    binop          590  survived   7.1%  ##
+    compare        295  survived  25.8%  #######
+    negate_if      220  survived   1.8%  #
+    boolop          41  survived   9.8%  ###
+
+  problems with mutants          : 336
+  suites that killed NOTHING     : 3  (0.9%)
+  suites that killed EVERYTHING  : 214  (63.7%)
+
+  ------------------------------------------------------------------
+  SEPARATING INPUTS - survivors proven to be different programs
+  ------------------------------------------------------------------
+    survivors checked : 310
+    PROVEN WRONG      : 145  (46.8% of survivors)
+    unproven          : 165  (equivalent, or not separated by the inputs tried)
+
+    => 7.3% of all mutants are provably wrong programs that MBPP accepts
+
+    witnesses:
+      task    9  f('')
+              reference ('ok', '0')   mutant ('ok', '1')
+      task   11  f('', 'l')
+              reference ('ok', "''")   mutant ('exc', 'IndexError')
+      task   20  f(1)
+              reference ('ok', 'True')   mutant ('ok', 'False')
+      task   20  f(-383)
+              reference ('ok', 'False')   mutant ('ok', 'True')
+      task   20  f(-383)
+              reference ('ok', 'False')   mutant ('ok', 'True')
+      task   56  f(1)
+              reference ('ok', 'True')   mutant ('ok', 'False')
+
+wrote D:\github\mbpp-false-accepts\results\mutation_sanitized.jsonl
