@@ -5,11 +5,19 @@ are fooled in practice, by the kind of wrong answer a model produces on its own.
 
 For each problem: generate a solution with a local coder model, keep only the ones that
 pass all three asserts - MBPP calls these correct - and then look for an input on which
-the accepted solution and the reference disagree. Every such input is a program MBPP
-scored as a pass and that is demonstrably not the reference behaviour.
+the accepted solution and the reference disagree.
 
-This is a stronger claim than mutation survival. A mutant is a program nobody wrote; a
-generation is the output of the workflow the benchmark exists to measure.
+**A disagreement is not proof the generation is wrong.** That distinction matters here and
+does not arise in the mutation arm. A mutant is derived from the reference, so a difference
+means the mutant deviates. A generation is independent, so a difference can equally mean
+the *reference* is wrong - and sometimes it does. MBPP's `is_not_prime` returns `False`
+for 1, which is incorrect: 1 is not prime. A model that returns `True` disagrees with the
+reference and is right.
+
+So what this measures is that **three asserts do not pin the behaviour down**. Two programs
+both pass, they do different things outside the tested values, and the benchmark has no
+opinion about which is correct. That is the finding, and it is weaker and more honest than
+"the model was wrong".
 
     python run_model.py                    # all 974
     python run_model.py --limit 50         # quick
@@ -164,7 +172,7 @@ def main() -> int:
                 "task_id": p.task_id,
                 "entry_point": p.entry_point,
                 "accepted": True,
-                "proven_wrong": w.found,
+                "disagrees": w.found,
                 "witness": ({"args": w.args, "ref": w.ref, "mut": w.mut} if w.found else None),
                 "reason": None if w.found else w.reason,
             }
@@ -173,20 +181,23 @@ def main() -> int:
         "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
     )
 
-    wrong = [r for r in rows if r["proven_wrong"]]
+    differ = [r for r in rows if r["disagrees"]]
     print("\n" + "=" * 70)
-    print("FALSE ACCEPTS - solutions MBPP passed that differ from the reference")
+    print("UNDERSPECIFIED - accepted solutions that differ from the reference")
     print("=" * 70)
     print(f"  problems attempted    : {n}")
     print(f"  accepted by MBPP      : {len(accepted)}  ({len(accepted) / n:.1%})")
-    print(f"  of those, PROVEN WRONG: {len(wrong)}  ({len(wrong) / len(accepted):.1%} of accepted)")
     print(
-        f"\n  => MBPP's reported pass rate of {len(accepted) / n:.1%} contains "
-        f"{len(wrong) / n:.1%} of the\n     total that is demonstrably not the "
-        "reference behaviour."
+        f"  of those, DISAGREE    : {len(differ)}  ({len(differ) / len(accepted):.1%} of accepted)"
+    )
+    print(
+        f"\n  => {len(differ) / len(accepted):.1%} of the solutions MBPP accepted behave "
+        "differently from the\n     reference on some input. Three asserts did not decide "
+        "between them, and\n     which of the two is correct is a question MBPP does not "
+        "answer."
     )
     print("\n  witnesses:")
-    for r in wrong[:8]:
+    for r in differ[:8]:
         w = r["witness"]
         print(f"    task {r['task_id']:4} {r['entry_point']:22} f({w['args'][:30]})")
         print(f"          reference {w['ref'][:32]}   generated {w['mut'][:32]}")
