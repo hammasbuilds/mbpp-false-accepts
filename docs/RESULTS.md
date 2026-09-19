@@ -147,6 +147,26 @@ problems define a class in the solution (`class Node`) that setup then instantia
 Together these made five reference solutions look broken. Exactly one is: **task 180**,
 which asserts float equality on a haversine distance.
 
+## Is the witness search strong enough?
+
+442 of 897 survivors were proven wrong. The obvious objection is that the other 455 are
+separable too and the search is simply too weak - which would mean the headline understates
+the problem rather than overstating it.
+
+Tested rather than assumed. Twenty-five unproven survivors were sampled and attacked with a
+brute-force search far wider than the real one: every combination of up to three arguments
+drawn from a pool of ints, negatives, empty and non-empty lists, tuples and strings, up to
+3,000 combinations per mutant.
+
+**It separated 3 of 25.**
+
+So the unproven bucket is mostly genuine equivalent mutants, not search failure. Scaling that
+rate over all 455 would move the headline from 8.6% to roughly 9.7% - the right order, and
+the reported number stays a lower bound.
+
+The 455 break down as 425 where no separating input was found and 30 where the probe itself
+timed out, the latter being mutants that hang on some input.
+
 ## What this does not establish
 
 - MBPP's reference solutions are the oracle here, not ground truth about the task
