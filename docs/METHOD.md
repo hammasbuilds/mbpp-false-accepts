@@ -35,12 +35,22 @@ A mutant that still passes is a program MBPP cannot distinguish from the right a
 
 ## Arm 2 - generation
 
-The mutation arm asks whether the asserts *can* be fooled. This asks whether they are
-fooled in practice: generate a solution with a local coder model, keep only those that
-pass all three asserts, and then check whether they actually match the reference.
+The mutation arm asks whether the asserts *can* be fooled. This asks what happens with the
+kind of solution a model actually writes: generate one with a local coder model, keep only
+those that pass all three asserts, and then look for an input where the accepted solution
+and the reference disagree.
 
-That is a stronger claim. A mutant is a program nobody wrote; a generation is the output
-of the workflow the benchmark exists to measure.
+**A disagreement here is not proof the generation is wrong**, and that distinction does not
+arise in the mutation arm. A mutant is derived from the reference, so a difference means
+the mutant deviates. A generation is written independently, so a difference can equally
+mean the *reference* is wrong.
+
+It sometimes does. MBPP's `is_not_prime` returns `False` for 1, which is incorrect - 1 is
+not prime. A model that returns `True` disagrees with the reference and is right.
+
+So arm 2 measures something more careful than "the model was wrong": **three asserts do not
+pin the behaviour down.** Two programs both pass, they do different things outside the
+tested values, and the benchmark has no opinion about which is correct.
 
 ## Separating inputs, not just survival
 
