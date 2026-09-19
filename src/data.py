@@ -106,8 +106,7 @@ def load(limit: int | None = None, split: str = "full") -> list[Problem]:
                 code=r["code"],
                 test_list=tuple(r["test_list"]),
                 test_setup_code=(
-                    r.get("test_setup_code")
-                    or "\n".join(r.get("test_imports") or ())
+                    r.get("test_setup_code") or "\n".join(r.get("test_imports") or ())
                 ),
                 challenge_test_list=tuple(r.get("challenge_test_list") or ()),
             )

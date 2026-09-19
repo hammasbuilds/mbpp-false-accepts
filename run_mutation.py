@@ -42,13 +42,16 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int)
     ap.add_argument(
-        "--split", choices=["full", "sanitized"], default="full",
+        "--split",
+        choices=["full", "sanitized"],
+        default="full",
         help="sanitized is the 427 problems the authors hand-verified",
     )
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--per-problem", type=int, default=MUTANTS_PER_PROBLEM)
     ap.add_argument(
-        "--no-witness", action="store_true",
+        "--no-witness",
+        action="store_true",
         help="skip the search for separating inputs (faster, weaker claim)",
     )
     args = ap.parse_args()
@@ -59,17 +62,17 @@ def main() -> int:
     # Validate the reference solutions first. A reference that fails its own asserts
     # would make every mutant of it meaningless, and MBPP is known to contain a few.
     t = time.time()
-    ref = run_many(
-        [(p.code, list(p.test_list), p.test_setup_code) for p in probs], args.workers
-    )
+    ref = run_many([(p.code, list(p.test_list), p.test_setup_code) for p in probs], args.workers)
     broken = [p.task_id for p, o in zip(probs, ref, strict=True) if not o.passed]
     print(
         f"reference solutions passing their own tests: "
         f"{len(probs) - len(broken)}/{len(probs)}  ({time.time() - t:.0f}s)"
     )
     if broken:
-        print(f"  excluded (reference does not pass): {broken[:12]}"
-              f"{' ...' if len(broken) > 12 else ''}")
+        print(
+            f"  excluded (reference does not pass): {broken[:12]}"
+            f"{' ...' if len(broken) > 12 else ''}"
+        )
     usable = [p for p, o in zip(probs, ref, strict=True) if o.passed]
 
     jobs, meta = [], []
@@ -180,8 +183,7 @@ def report(rows: list[dict], usable, split: str = "full") -> None:
         f"({len(none_killed) / len(per):.1%})"
     )
     print(
-        f"  suites that killed EVERYTHING  : {len(all_killed)}  "
-        f"({len(all_killed) / len(per):.1%})"
+        f"  suites that killed EVERYTHING  : {len(all_killed)}  ({len(all_killed) / len(per):.1%})"
     )
 
     checked = [r for r in survived if "proven_wrong" in r]
@@ -211,9 +213,7 @@ def report(rows: list[dict], usable, split: str = "full") -> None:
     else:
         print("\n  sample survivors:")
         for r in survived[:5]:
-            first = next(
-                (ln for ln in r["code"].splitlines() if ln.strip().startswith("def ")), ""
-            )
+            first = next((ln for ln in r["code"].splitlines() if ln.strip().startswith("def ")), "")
             print(f"    task {r['task_id']:4} [{r['where']:14}] {first.strip()[:56]}")
     print(f"\nwrote {OUT / f'mutation_{split}.jsonl'}")
 

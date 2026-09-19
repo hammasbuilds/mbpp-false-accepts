@@ -27,20 +27,28 @@ from dataclasses import dataclass
 # `<=` is the off-by-one a person actually writes, and it is the case a three-assert
 # suite is least likely to cover.
 CMP_SWAP = {
-    ast.Lt: ast.LtE, ast.LtE: ast.Lt,
-    ast.Gt: ast.GtE, ast.GtE: ast.Gt,
-    ast.Eq: ast.NotEq, ast.NotEq: ast.Eq,
-    ast.Is: ast.IsNot, ast.IsNot: ast.Is,
-    ast.In: ast.NotIn, ast.NotIn: ast.In,
+    ast.Lt: ast.LtE,
+    ast.LtE: ast.Lt,
+    ast.Gt: ast.GtE,
+    ast.GtE: ast.Gt,
+    ast.Eq: ast.NotEq,
+    ast.NotEq: ast.Eq,
+    ast.Is: ast.IsNot,
+    ast.IsNot: ast.Is,
+    ast.In: ast.NotIn,
+    ast.NotIn: ast.In,
 }
 
 BIN_SWAP = {
-    ast.Add: ast.Sub, ast.Sub: ast.Add,
-    ast.Mult: ast.FloorDiv, ast.FloorDiv: ast.Mult,
+    ast.Add: ast.Sub,
+    ast.Sub: ast.Add,
+    ast.Mult: ast.FloorDiv,
+    ast.FloorDiv: ast.Mult,
     ast.Div: ast.Mult,
     ast.Mod: ast.FloorDiv,
     ast.Pow: ast.Mult,
-    ast.BitAnd: ast.BitOr, ast.BitOr: ast.BitAnd,
+    ast.BitAnd: ast.BitOr,
+    ast.BitOr: ast.BitAnd,
 }
 
 BOOL_SWAP = {ast.And: ast.Or, ast.Or: ast.And}

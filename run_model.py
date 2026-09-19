@@ -165,9 +165,7 @@ def main() -> int:
                 "entry_point": p.entry_point,
                 "accepted": True,
                 "proven_wrong": w.found,
-                "witness": (
-                    {"args": w.args, "ref": w.ref, "mut": w.mut} if w.found else None
-                ),
+                "witness": ({"args": w.args, "ref": w.ref, "mut": w.mut} if w.found else None),
                 "reason": None if w.found else w.reason,
             }
         )
@@ -181,10 +179,7 @@ def main() -> int:
     print("=" * 70)
     print(f"  problems attempted    : {n}")
     print(f"  accepted by MBPP      : {len(accepted)}  ({len(accepted) / n:.1%})")
-    print(
-        f"  of those, PROVEN WRONG: {len(wrong)}  "
-        f"({len(wrong) / len(accepted):.1%} of accepted)"
-    )
+    print(f"  of those, PROVEN WRONG: {len(wrong)}  ({len(wrong) / len(accepted):.1%} of accepted)")
     print(
         f"\n  => MBPP's reported pass rate of {len(accepted) / n:.1%} contains "
         f"{len(wrong) / n:.1%} of the\n     total that is demonstrably not the "

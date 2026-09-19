@@ -58,13 +58,24 @@ def _perturb(node: ast.expr) -> list[ast.expr]:
         if isinstance(v, bool):
             out.append(ast.Constant(not v))
         elif isinstance(v, int):
-            out += [ast.Constant(v + 1), ast.Constant(v - 1), ast.Constant(0),
-                    ast.Constant(1), ast.Constant(2), ast.Constant(-v)]
+            out += [
+                ast.Constant(v + 1),
+                ast.Constant(v - 1),
+                ast.Constant(0),
+                ast.Constant(1),
+                ast.Constant(2),
+                ast.Constant(-v),
+            ]
         elif isinstance(v, float):
             out += [ast.Constant(v + 1.0), ast.Constant(0.0), ast.Constant(-v)]
         elif isinstance(v, str):
-            out += [ast.Constant(v + v[:1]), ast.Constant(v[:-1]), ast.Constant(""),
-                    ast.Constant(v.upper()), ast.Constant(v * 2)]
+            out += [
+                ast.Constant(v + v[:1]),
+                ast.Constant(v[:-1]),
+                ast.Constant(""),
+                ast.Constant(v.upper()),
+                ast.Constant(v * 2),
+            ]
     elif isinstance(node, (ast.List, ast.Tuple, ast.Set)):
         elts = list(node.elts)
         cls = type(node)
@@ -114,7 +125,7 @@ def _src(node: ast.expr) -> str:
     return ast.unparse(node)
 
 
-_PROBE = '''\
+_PROBE = """\
 import json, sys
 {setup}
 _NS_REF = {{}}
@@ -144,7 +155,7 @@ for src in CASES:
     if a != b:
         print(json.dumps({{"args": src, "ref": str(a), "mut": str(b)}}))
         break
-'''
+"""
 
 
 def find_witness(
@@ -159,8 +170,13 @@ def find_witness(
         f.write_text(src, encoding="utf-8", newline="")
         try:
             r = subprocess.run(
-                [sys.executable, str(f)], capture_output=True, text=True,
-                encoding="utf-8", errors="replace", timeout=TIMEOUT, cwd=tmp,
+                [sys.executable, str(f)],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=TIMEOUT,
+                cwd=tmp,
             )
         except subprocess.TimeoutExpired:
             return Witness(False, reason="timeout")

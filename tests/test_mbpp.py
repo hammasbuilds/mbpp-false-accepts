@@ -129,8 +129,7 @@ def test_candidates_perturb_each_argument():
 
 
 def test_witness_found_for_a_genuinely_different_program():
-    w = find_witness(GOOD, "def add(a, b):\n    return a * b\n", "add",
-                     ("assert add(1, 2) == 3",))
+    w = find_witness(GOOD, "def add(a, b):\n    return a * b\n", "add", ("assert add(1, 2) == 3",))
     assert w.found
     assert w.ref != w.mut
 

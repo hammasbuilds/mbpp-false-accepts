@@ -70,8 +70,11 @@ def run(code: str, tests: list[str], setup: str = "", timeout: float = TIMEOUT) 
         try:
             r = subprocess.run(
                 [sys.executable, str(f)],
-                capture_output=True, text=True, encoding="utf-8",
-                errors="replace", timeout=timeout,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout,
                 # Inherit no cwd of ours: a candidate that writes files should not be
                 # able to write them next to the source it was generated from.
                 cwd=tmp,
