@@ -30,11 +30,13 @@ import argparse
 import json
 import re
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
 import warnings
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
@@ -102,6 +104,7 @@ def main() -> int:
     ap.add_argument("--limit", type=int)
     ap.add_argument("--model", default="qwen2.5-coder:14b")
     ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--gen-workers", type=int, default=8)
     args = ap.parse_args()
 
     probs = [p for p in load(limit=args.limit) if p.entry_point]
@@ -121,21 +124,33 @@ def main() -> int:
     todo = [p for p in probs if p.task_id not in done]
     print(f"generations: {len(done)} cached, {len(todo)} to go")
 
+    # Generate concurrently. One request at a time leaves the GPU near 9% utilised -
+    # it spends almost all of its time waiting for the next HTTP round trip instead of
+    # decoding. A pool of workers takes it to ~98%.
     t0 = time.time()
+    lock = threading.Lock()
+    counter = [0]
     with gen_path.open("a", encoding="utf-8") as fh:
-        for i, p in enumerate(todo, 1):
+
+        def one(p):
             raw = _generate(p.text, p.test_list[0], args.model)
             code = extract_code(raw) if raw is not None else ""
-            done[p.task_id] = code
-            fh.write(json.dumps({"task_id": p.task_id, "code": code}) + "\n")
-            fh.flush()
-            if i % 25 == 0 or i == len(todo):
-                rate = (time.time() - t0) / i
-                print(
-                    f"  {i}/{len(todo)}  {rate:.1f}s each  "
-                    f"eta {rate * (len(todo) - i) / 60:.0f} min",
-                    flush=True,
-                )
+            with lock:
+                done[p.task_id] = code
+                fh.write(json.dumps({"task_id": p.task_id, "code": code}) + "\n")
+                fh.flush()
+                counter[0] += 1
+                i = counter[0]
+                if i % 25 == 0 or i == len(todo):
+                    rate = (time.time() - t0) / i
+                    print(
+                        f"  {i}/{len(todo)}  {rate:.2f}s each  "
+                        f"eta {rate * (len(todo) - i) / 60:.0f} min",
+                        flush=True,
+                    )
+
+        with ThreadPoolExecutor(max_workers=args.gen_workers) as pool:
+            list(pool.map(one, todo))
 
     # Which generations does MBPP call correct?
     jobs = [(done[p.task_id], list(p.test_list), p.test_setup_code) for p in probs]

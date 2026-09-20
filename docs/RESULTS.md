@@ -147,6 +147,44 @@ problems define a class in the solution (`class Node`) that setup then instantia
 Together these made five reference solutions look broken. Exactly one is: **task 180**,
 which asserts float equality on a haversine distance.
 
+## Arm 2 - solutions a model actually wrote
+
+`qwen2.5-coder:14b`, all 972 problems with a recoverable entry point, temperature 0.
+
+```
+accepted by MBPP  : 777/972  (79.9%)
+of those, DISAGREE: 195      (25.1% of accepted)
+no witness found  : 569
+witness search timed out: 13
+```
+
+A quarter of everything MBPP accepted differs from the reference on some input.
+
+**A disagreement is not proof the generation is wrong.** This is the one place the mutation
+arm and this arm differ in what they can claim. A mutant is derived from the reference, so
+a difference means the mutant deviates. A generation is independent, so the reference can be
+the one at fault - and sometimes it is:
+
+| Function | Input | Reference | Generated |
+|---|---|---|---|
+| `is_not_prime` | `1` | `False` | `True` |
+| `maximum_Sum` | `[]` | `-100000` | `ValueError` |
+| `binomial_Coeff` | `-5, 2` | `0` | `IndexError` |
+| `remove_Occ` | `'hello', 'll'` | `'hello'` | `'heo'` |
+| `min_cost` | out-of-range index | `0` | `IndexError` |
+
+`is_not_prime(1)` returning `False` is simply wrong - 1 is not prime - so the model
+disagrees with the reference and is right. The rest are untested edges: empty input,
+negative arguments, a two-character substring. The benchmark has no opinion about any of
+them, which is the point.
+
+So arm 2 measures something more careful than "the model was wrong": **three asserts do not
+pin the behaviour down.** Two programs both pass and do different things, and MBPP cannot
+say which is correct.
+
+The pass@1 of 79.9% is not wrong, but it is not a statement about correctness either. It is
+a statement about agreement with three examples.
+
 ## Is the witness search strong enough?
 
 442 of 897 survivors were proven wrong. The obvious objection is that the other 455 are

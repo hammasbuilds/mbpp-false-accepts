@@ -1,0 +1,72 @@
+problems: 972  model: qwen2.5-coder:14b
+generations: 192 cached, 780 to go
+  25/780  2.05s each  eta 26 min
+  50/780  3.01s each  eta 37 min
+  75/780  4.22s each  eta 50 min
+  100/780  4.17s each  eta 47 min
+  125/780  5.07s each  eta 55 min
+  150/780  5.70s each  eta 60 min
+  175/780  5.39s each  eta 54 min
+  200/780  5.38s each  eta 52 min
+  225/780  5.28s each  eta 49 min
+  250/780  4.95s each  eta 44 min
+  275/780  4.70s each  eta 40 min
+  300/780  4.53s each  eta 36 min
+  325/780  4.40s each  eta 33 min
+  350/780  4.30s each  eta 31 min
+  375/780  4.17s each  eta 28 min
+  400/780  4.03s each  eta 26 min
+  425/780  3.95s each  eta 23 min
+  450/780  3.86s each  eta 21 min
+  475/780  3.78s each  eta 19 min
+  500/780  3.71s each  eta 17 min
+  525/780  3.65s each  eta 16 min
+  550/780  3.58s each  eta 14 min
+  575/780  3.53s each  eta 12 min
+  600/780  3.50s each  eta 10 min
+  625/780  3.43s each  eta 9 min
+  650/780  3.42s each  eta 7 min
+  675/780  3.39s each  eta 6 min
+  700/780  3.34s each  eta 4 min
+  725/780  3.31s each  eta 3 min
+  750/780  3.29s each  eta 2 min
+  775/780  3.26s each  eta 0 min
+  780/780  3.25s each  eta 0 min
+
+running generations against MBPP's asserts...
+  accepted by MBPP : 777/972  (79.9%)  <- pass@1
+  fail             : 175
+  error            : 19
+  timeout          : 1
+
+searching for separating inputs on 777 accepted solutions...
+  done in 38s
+
+======================================================================
+UNDERSPECIFIED - accepted solutions that differ from the reference
+======================================================================
+  problems attempted    : 972
+  accepted by MBPP      : 777  (79.9%)
+  of those, DISAGREE    : 195  (25.1% of accepted)
+
+  => 25.1% of the solutions MBPP accepted behave differently from the
+     reference on some input. Three asserts did not decide between them, and
+     which of the two is correct is a question MBPP does not answer.
+
+  witnesses:
+    task    1 min_cost               f([[1, 2, 3], [4, 8, 2], [1, 5, )
+          reference ('ok', '0')   generated ('exc', 'IndexError')
+    task    3 is_not_prime           f(1)
+          reference ('ok', 'False')   generated ('ok', 'True')
+    task   10 small_nnum             f([10, 20, 50, 70, 90, 20, 50, 4)
+          reference ('ok', '[]')   generated ('ok', '[10, 20, 20, 40, 50, 50,
+    task   11 remove_Occ             f('hello', 'll')
+          reference ('ok', "'hello'")   generated ('ok', "'heo'")
+    task   23 maximum_Sum            f([])
+          reference ('ok', '-100000')   generated ('exc', 'ValueError')
+    task   28 binomial_Coeff         f(-5, 2)
+          reference ('ok', '0')   generated ('exc', 'IndexError')
+    task   34 find_missing           f([5, 3, 2, 1], 4)
+          reference ('ok', '-1')   generated ('ok', '1')
+    task   36 find_Nth_Digit         f(2, 2, 1)
+          reference ('ok', '10')   generated ('ok', '0')

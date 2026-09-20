@@ -117,6 +117,42 @@ That is the finding. The weakness is not careless asserts that review can catch.
 examples cannot pin down a boundary**, however carefully the three are chosen, and
 reviewing them one at a time does not change how many there are.
 
+## The same thing, with solutions a model actually wrote
+
+Mutants are programs nobody wrote. So: generate a solution for all 972 problems with
+`qwen2.5-coder:14b`, keep the ones MBPP accepts, and check whether they match the
+reference.
+
+```
+accepted by MBPP  : 777/972  (79.9%)   <- this is the pass@1 anyone would report
+of those, DISAGREE: 195      (25.1% of accepted)
+```
+
+**A quarter of the solutions MBPP accepted behave differently from the reference on some
+input.** Three asserts did not decide between them.
+
+Note carefully what that is *not*. A disagreement here is not proof the model was wrong -
+unlike a mutant, a generated solution is written independently, so the reference can be the
+one at fault. It sometimes is:
+
+```
+is_not_prime(1)   reference -> False   generated -> True
+```
+
+1 is not prime, so the generated answer is right and MBPP's reference is wrong.
+
+The other witnesses are mostly untested edges, where the benchmark simply has no opinion:
+
+```
+maximum_Sum([])           reference -> -100000      generated -> ValueError
+binomial_Coeff(-5, 2)     reference -> 0            generated -> IndexError
+remove_Occ('hello','ll')  reference -> 'hello'      generated -> 'heo'
+```
+
+That is the honest version of the finding: **three asserts do not pin the behaviour down**.
+Two programs both pass, they differ outside the tested values, and which one is correct is
+a question the benchmark does not answer.
+
 ## Which mutations slip through
 
 | Mutation | Run | Survived |
