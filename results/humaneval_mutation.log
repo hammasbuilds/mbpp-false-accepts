@@ -1,0 +1,58 @@
+problems: 164  split: humaneval
+reference solutions passing their own tests: 164/164  (4s)
+mutants to run: 1104
+ran in 43s
+
+searching for separating inputs on 126 survivors...
+  done in 11s
+
+======================================================================
+MUTATION SURVIVAL - wrong code that HumanEval's ~7 asserts accept
+======================================================================
+  mutants run       : 1104
+  SURVIVED (passed) : 126  (11.4%)  <- false accepts
+  killed            : 978  (88.6%)
+
+  how the killed ones died:
+    fail       878  (79.5%)
+    error       90  ( 8.2%)
+    timeout     10  ( 0.9%)
+
+  of those killed, 89.8% failed an assert; the rest crashed or hung,
+  which the suite catches without actually testing for it.
+
+  survival by mutation kind:
+    const          450  survived  15.6%  ####
+    binop          227  survived   8.4%  ##
+    compare        225  survived  14.7%  ####
+    negate_if      171  survived   1.2%  
+    boolop          31  survived   6.5%  ##
+
+  problems with mutants          : 155
+  suites that killed NOTHING     : 1  (0.6%)
+  suites that killed EVERYTHING  : 98  (63.2%)
+
+  ------------------------------------------------------------------
+  SEPARATING INPUTS - survivors proven to be different programs
+  ------------------------------------------------------------------
+    survivors checked : 126
+    PROVEN WRONG      : 36  (28.6% of survivors)
+    unproven          : 90  (equivalent, or not separated by the inputs tried)
+
+    => 3.3% of all mutants are provably wrong programs that HumanEval accepts
+
+    witnesses:
+      task   10  f('xyzx')
+              reference ('ok', "'xyzxzyx'")   mutant ('ok', "'xyzxxzyx'")
+      task   18  f('', '')
+              reference ('ok', '1')   mutant ('ok', '2')
+      task   20  f([1.0, 2.0, 0.0, 4.0, 5.0])
+              reference ('ok', '(1.0, 2.0)')   mutant ('ok', '(0.0, 1.0)')
+      task   20  f([1.0, 2.0, 6.9, 4.0, 5.0])
+              reference ('ok', '(1.0, 2.0)')   mutant ('ok', '(4.0, 5.0)')
+      task   31  f(2)
+              reference ('ok', 'True')   mutant ('ok', 'False')
+      task   31  f(2)
+              reference ('ok', 'True')   mutant ('ok', 'False')
+
+wrote D:\github\mbpp-false-accepts\results\mutation_humaneval.jsonl

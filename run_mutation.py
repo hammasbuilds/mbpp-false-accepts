@@ -43,9 +43,10 @@ def main() -> int:
     ap.add_argument("--limit", type=int)
     ap.add_argument(
         "--split",
-        choices=["full", "sanitized"],
+        choices=["full", "sanitized", "humaneval"],
         default="full",
-        help="sanitized is the 427 problems the authors hand-verified",
+        help="sanitized is the 427 the authors hand-verified; "
+        "humaneval is a second benchmark with ~7 asserts per problem instead of 3",
     )
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--per-problem", type=int, default=MUTANTS_PER_PROBLEM)
@@ -114,7 +115,7 @@ def main() -> int:
                 by_id[r["task_id"]].code,
                 r["code"],
                 by_id[r["task_id"]].entry_point,
-                by_id[r["task_id"]].test_list,
+                by_id[r["task_id"]].witness_tests,
                 by_id[r["task_id"]].test_setup_code,
             )
             for r in survivors
@@ -146,8 +147,11 @@ def report(rows: list[dict], usable, split: str = "full") -> None:
     survived = [r for r in rows if r["survived"]]
     status = Counter(r["status"] for r in rows)
 
+    # The headline names the suite being measured. Leaving "MBPP's 3 asserts" hardcoded
+    # would print it over HumanEval's numbers too, and a reader has no way to tell.
+    suite = "HumanEval's ~7 asserts" if split == "humaneval" else "MBPP's 3 asserts"
     print("\n" + "=" * 70)
-    print("MUTATION SURVIVAL - wrong code that MBPP's 3 asserts accept")
+    print(f"MUTATION SURVIVAL - wrong code that {suite} accept")
     print("=" * 70)
     print(f"  mutants run       : {n}")
     print(f"  SURVIVED (passed) : {len(survived)}  ({len(survived) / n:.1%})  <- false accepts")
@@ -203,7 +207,7 @@ def report(rows: list[dict], usable, split: str = "full") -> None:
         )
         print(
             f"\n    => {len(proven) / n:.1%} of all mutants are provably wrong programs "
-            "that MBPP accepts"
+            f"that {'HumanEval' if split == 'humaneval' else 'MBPP'} accepts"
         )
         print("\n    witnesses:")
         for r in proven[:6]:

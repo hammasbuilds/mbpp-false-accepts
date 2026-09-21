@@ -180,3 +180,68 @@ def test_both_splits_are_known():
     from data import SPLITS
 
     assert set(SPLITS) == {"full", "sanitized"}
+
+
+# --- humaneval -----------------------------------------------------------------------
+#
+# Hand-written in HumanEval's shape, so these fail when the adapter is wrong rather than
+# when `data/humaneval.jsonl` is absent.
+
+HE_CHECK = (
+    "def check(candidate):\n"
+    "    assert candidate(1, 2) == 3\n"
+    "    assert candidate(0, 0) == 0\n"
+    "    assert candidate(-1, 1) == 0\n"
+)
+HE = Problem(
+    task_id=0,
+    text="def add(a, b):\n    '''Add.'''\n",
+    code=GOOD,
+    test_list=(HE_CHECK, "check(add)"),
+    test_setup_code="",
+    challenge_test_list=(),
+    source="humaneval",
+    named_entry_point="add",
+)
+
+
+def test_humaneval_entry_point_is_the_function_not_the_parameter():
+    # Read from the asserts it would be "candidate", which exists in no solution, and
+    # the witness search would then silently separate nothing.
+    assert HE.entry_point == "add"
+
+
+def test_humaneval_suite_actually_runs():
+    # `check` is only defined by the blob. Without the trailing call the candidate
+    # passes by asserting nothing, which is a 0% false-accept rate that means nothing ran.
+    assert run(HE.code, list(HE.test_list)).status == "pass"
+    assert run(HE.code, [HE_CHECK]).status == "pass"  # defines check, never calls it
+    assert run("def add(a, b):\n    return a - b\n", list(HE.test_list)).status == "fail"
+
+
+def test_humaneval_asserts_are_unpacked_and_renamed():
+    assert HE.asserts == (
+        "assert add(1, 2) == 3",
+        "assert add(0, 0) == 0",
+        "assert add(-1, 1) == 0",
+    )
+
+
+def test_witness_tests_give_the_search_every_assert():
+    # The whole point: `test_list` would hand the search one blob and yield one seed,
+    # making HumanEval's survivors look equivalent when the search was just starved.
+    assert len(candidate_calls(HE.witness_tests)) > len(candidate_calls(HE.test_list))
+
+
+def test_prompt_test_is_one_assert_not_the_whole_suite():
+    # Passing the blob would show the model every assert it is about to be graded on.
+    assert HE.prompt_test == "assert add(1, 2) == 3"
+    assert "check" not in HE.prompt_test
+
+
+def test_mbpp_problems_are_unaffected():
+    p = Problem(1, "t", GOOD, tuple(TESTS), "", ())
+    assert p.source == "mbpp"
+    assert p.asserts == tuple(TESTS)
+    assert p.witness_tests == tuple(TESTS)
+    assert p.prompt_test == TESTS[0]

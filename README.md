@@ -5,13 +5,14 @@
   <a href="https://github.com/hammasbuilds/mbpp-false-accepts/actions/workflows/ci.yml"><img src="https://github.com/hammasbuilds/mbpp-false-accepts/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="python">
   <img src="https://img.shields.io/badge/runtime%20deps-0-brightgreen" alt="zero dependencies">
-  <img src="https://img.shields.io/badge/tests-26-brightgreen" alt="tests">
+  <img src="https://img.shields.io/badge/tests-32-brightgreen" alt="tests">
 </p>
 
 <p align="center">
   <a href="#the-result">The result</a> &middot;
   <a href="#what-that-looks-like">What that looks like</a> &middot;
   <a href="#hand-verification-does-not-fix-it">Hand-verification</a> &middot;
+  <a href="#does-a-thicker-suite-fix-it-partly">HumanEval</a> &middot;
   <a href="#run-it">Run it</a> &middot;
   <a href="#input">Input</a> &middot;
   <a href="#output">Output</a> &middot;
@@ -124,6 +125,42 @@ That is the finding. The weakness is not careless asserts that review can catch.
 examples cannot pin down a boundary**, however carefully the three are chosen, and
 reviewing them one at a time does not change how many there are.
 
+## Does a thicker suite fix it? Partly.
+
+"Three asserts is too thin" and "accepting code because asserts passed is too thin" are
+different claims, and MBPP alone cannot separate them - every problem in it has exactly
+three. So the same measurement was run on **HumanEval**, whose suites average 7.2 asserts
+and run as high as 26.
+
+| | MBPP (3 asserts) | HumanEval (~7 asserts) |
+|---|---:|---:|
+| reference solutions passing their own tests | 973/974 | **164/164** |
+| mutants run | 5116 | 1104 |
+| survived | 17.6% | **11.4%** |
+| provably wrong, of all mutants | 8.6% | **3.3%** |
+| problems with ≥1 proven-wrong survivor | 29.0% | **12.9%** |
+| `compare` mutations surviving | 25.9% | **14.7%** |
+| suites that killed nothing | 7 (0.9%) | 1 (0.6%) |
+
+More asserts help, and the help is real rather than marginal: false accepts drop by a third
+and provably-wrong accepts by more than half. Hand-verification moved the same numbers by
+about a point. Suite *size* is the lever; suite *review* is not.
+
+But it does not close. Doubling the asserts still leaves **3.3% of mutants accepted with a
+witness attached** - 36 programs that return a different answer from the reference on an
+input anyone can print, marked correct. `compare` is the survivor in both, at 25.9% and
+14.7%: the off-by-one at a boundary is what example-based asserts are worst at, and adding
+more examples of the same kind narrows the gap without removing it.
+
+So the weakness is not specific to MBPP, and it is not only about the number three.
+
+<sub>Fair-comparison note: the separating-input search mines candidate arguments from each
+assert it is handed. HumanEval packs its whole suite into one `def check(candidate)` blob,
+which yields one seed where MBPP's three separate asserts yield three - and a starved search
+reports more survivors as "equivalent". Unpacking the blob first took HumanEval's
+proven-wrong rate from 1.1% to 4.4% on the first 25 problems. Without that, HumanEval would
+have looked like it had more untestable mutants when the only difference was packaging.</sub>
+
 ## The same thing, with solutions a model actually wrote
 
 Mutants are programs nobody wrote. So: generate a solution for all 972 problems with
@@ -205,13 +242,20 @@ haversine distance.
 ```bash
 python run_mutation.py                     # all 974, no model needed
 python run_mutation.py --split sanitized   # the 427 hand-verified problems
+python run_mutation.py --split humaneval   # the 164 HumanEval problems
 python run_model.py                        # generated solutions, needs Ollama
-pytest -q                                  # 26 tests, no network, no dataset needed
+python run_model.py --split humaneval      # the same, on HumanEval
+pytest -q                                  # 32 tests, no network, no dataset needed
 ```
 
 Zero runtime dependencies. The dataset is a local JSONL, mutation is stdlib `ast`, and
 execution is stdlib `subprocess`. Every figure in this README is recomputed by those two
 scripts from `results/*.jsonl`; nothing is typed by hand.
+
+HumanEval ships as parquet, which would need pyarrow to read. Rather than take a runtime
+dependency to read 84 KB, `scripts/convert_humaneval.py` converts it once and
+`data/humaneval.jsonl` is committed with its provenance; the repo still runs in a bare
+checkout with nothing installed.
 
 ---
 
@@ -251,14 +295,15 @@ Related, and reaching the same conclusion from other directions:
 ## Layout
 
 ```
-src/data.py           load both splits from the local HF cache
+src/data.py           load MBPP's two splits from the HF cache, and HumanEval from data/
 src/mutate.py         single-point AST mutation: compare, binop, const, negate_if, boolop
 src/sandbox.py        subprocess execution with a timeout; pass / fail / error / timeout
 src/differential.py   searches for a separating input between reference and mutant
 run_mutation.py       the mutation arm - no model needed
 run_model.py          the generated-solutions arm - needs Ollama
-tests/                26 tests, no network, no dataset, no model
+tests/                32 tests, no network, no dataset, no model
 results/              every mutant and verdict as JSONL, plus run logs
+scripts/              one-off conversion of the HumanEval parquet to JSONL
 docs/                 method and full results
 ```
 

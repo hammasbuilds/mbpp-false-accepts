@@ -105,13 +105,24 @@ def main() -> int:
     ap.add_argument("--model", default="qwen2.5-coder:14b")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--gen-workers", type=int, default=8)
+    ap.add_argument("--split", choices=["full", "sanitized", "humaneval"], default="full")
     args = ap.parse_args()
 
-    probs = [p for p in load(limit=args.limit) if p.entry_point]
-    print(f"problems: {len(probs)}  model: {args.model}")
+    probs = [p for p in load(limit=args.limit, split=args.split) if p.entry_point]
+    print(f"problems: {len(probs)}  model: {args.model}  split: {args.split}")
+    # Every headline below names the benchmark. Hardcoding "MBPP" would print it over
+    # HumanEval's numbers too, and the reader has no way to tell which one ran.
+    bench = "HumanEval" if args.split == "humaneval" else "MBPP"
 
     OUT.mkdir(parents=True, exist_ok=True)
-    gen_path = OUT / f"generations_{args.model.replace(':', '_').replace('/', '_')}.jsonl"
+    tag = args.model.replace(":", "_").replace("/", "_")
+    # The split belongs in the filename. HumanEval numbers task 0..163 and MBPP numbers
+    # from 1, so a shared cache keyed on task_id would serve MBPP generations as answers
+    # to HumanEval problems for the whole overlap - a resume that silently returns the
+    # wrong program, scored without complaint. `full` keeps its original name so the 972
+    # generations already on disk are still found.
+    suffix = "" if args.split == "full" else f"_{args.split}"
+    gen_path = OUT / f"generations_{tag}{suffix}.jsonl"
 
     # Resume: generation is the expensive half and an interrupted run should not
     # repeat it.
@@ -133,7 +144,7 @@ def main() -> int:
     with gen_path.open("a", encoding="utf-8") as fh:
 
         def one(p):
-            raw = _generate(p.text, p.test_list[0], args.model)
+            raw = _generate(p.text, p.prompt_test, args.model)
             code = extract_code(raw) if raw is not None else ""
             with lock:
                 done[p.task_id] = code
@@ -152,14 +163,14 @@ def main() -> int:
         with ThreadPoolExecutor(max_workers=args.gen_workers) as pool:
             list(pool.map(one, todo))
 
-    # Which generations does MBPP call correct?
+    # Which generations does the benchmark call correct?
     jobs = [(done[p.task_id], list(p.test_list), p.test_setup_code) for p in probs]
-    print("\nrunning generations against MBPP's asserts...")
+    print(f"\nrunning generations against {bench}'s asserts...")
     outcomes = run_many(jobs, args.workers)
     status = Counter(o.status for o in outcomes)
     accepted = [p for p, o in zip(probs, outcomes, strict=True) if o.passed]
     n = len(probs)
-    print(f"  accepted by MBPP : {len(accepted)}/{n}  ({len(accepted) / n:.1%})  <- pass@1")
+    print(f"  accepted by {bench} : {len(accepted)}/{n}  ({len(accepted) / n:.1%})  <- pass@1")
     for k in ("fail", "error", "timeout"):
         if status[k]:
             print(f"  {k:16} : {status[k]}")
@@ -173,7 +184,7 @@ def main() -> int:
     t = time.time()
     witnesses = find_many(
         [
-            (p.code, done[p.task_id], p.entry_point, p.test_list, p.test_setup_code)
+            (p.code, done[p.task_id], p.entry_point, p.witness_tests, p.test_setup_code)
             for p in accepted
         ],
         args.workers,
@@ -192,7 +203,7 @@ def main() -> int:
                 "reason": None if w.found else w.reason,
             }
         )
-    (OUT / f"model_{args.model.replace(':', '_')}.jsonl").write_text(
+    (OUT / f"model_{tag}{suffix}.jsonl").write_text(
         "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
     )
 
@@ -201,14 +212,14 @@ def main() -> int:
     print("UNDERSPECIFIED - accepted solutions that differ from the reference")
     print("=" * 70)
     print(f"  problems attempted    : {n}")
-    print(f"  accepted by MBPP      : {len(accepted)}  ({len(accepted) / n:.1%})")
+    print(f"  accepted by {bench:<10}: {len(accepted)}  ({len(accepted) / n:.1%})")
     print(
         f"  of those, DISAGREE    : {len(differ)}  ({len(differ) / len(accepted):.1%} of accepted)"
     )
     print(
-        f"\n  => {len(differ) / len(accepted):.1%} of the solutions MBPP accepted behave "
-        "differently from the\n     reference on some input. Three asserts did not decide "
-        "between them, and\n     which of the two is correct is a question MBPP does not "
+        f"\n  => {len(differ) / len(accepted):.1%} of the solutions {bench} accepted behave "
+        "differently from the\n     reference on some input. The asserts did not decide "
+        f"between them, and\n     which of the two is correct is a question {bench} does not "
         "answer."
     )
     print("\n  witnesses:")

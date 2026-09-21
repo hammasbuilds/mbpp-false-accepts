@@ -30,15 +30,73 @@ class Problem:
     test_list: tuple[str, ...]
     test_setup_code: str
     challenge_test_list: tuple[str, ...]
+    source: str = "mbpp"
+    # HumanEval's asserts call the function through a parameter named `candidate`, so
+    # reading the name out of the assert returns "candidate" - a name that exists in no
+    # solution. `differential.py` uses this name to call both programs and look for an
+    # input that separates them; given the wrong one it finds nothing and reports every
+    # survivor as unproven, which reads as "probably equivalent mutants" rather than as
+    # "the harness was calling something that does not exist". A silent wrong answer, so
+    # the name is carried explicitly where the dataset supplies one.
+    named_entry_point: str | None = None
 
     @property
     def entry_point(self) -> str | None:
         """The function the asserts call, or None if they call nothing recognisable."""
+        if self.named_entry_point:
+            return self.named_entry_point
         for t in self.test_list:
             m = _CALLED.search(t)
             if m:
                 return m.group(1)
         return None
+
+    @property
+    def asserts(self) -> tuple[str, ...]:
+        """The individual assert statements, however the dataset happens to store them.
+
+        MBPP stores three separate strings. HumanEval stores one `def check(candidate)`
+        blob, and every assert inside it calls the function through the parameter name
+        `candidate`, so each line is rewritten to name the function it actually tests.
+
+        Multi-line asserts and asserts built inside a loop are skipped rather than
+        guessed at, so this is a lower bound on HumanEval's suite, not a full parse.
+        """
+        if self.source != "humaneval":
+            return self.test_list
+        out = []
+        name = self.entry_point or "candidate"
+        for line in self.test_list[0].splitlines():
+            stripped = line.strip()
+            if stripped.startswith("assert ") and "candidate" in stripped:
+                out.append(stripped.replace("candidate", name))
+        return tuple(out)
+
+    @property
+    def prompt_test(self) -> str:
+        """One example assert, to show the model what the function should do.
+
+        MBPP's `test_list[0]` is one of three asserts, so the model sees a third of the
+        specification. HumanEval's whole suite is a single blob, and passing that as the
+        example would hand the model every assert it is about to be graded on. The two
+        arms would then not be measuring the same thing, and HumanEval would score higher
+        for a reason that has nothing to do with HumanEval. One assert each, in both.
+        """
+        picked = self.asserts
+        return picked[0] if picked else f"{self.entry_point}(...)"
+
+    @property
+    def witness_tests(self) -> tuple[str, ...]:
+        """The asserts the separating-input search mines for candidate arguments.
+
+        It must be the individual asserts, not `test_list`. `differential.call_args`
+        takes the first call out of each string it is given, so handing it HumanEval's
+        single blob yields one seed input where MBPP gets three - and a search given
+        fewer seeds finds fewer witnesses and reports more survivors as "equivalent".
+        HumanEval would then look like it had more untestable mutants when the only
+        real difference was how its asserts are packaged.
+        """
+        return self.asserts or self.test_list
 
 
 def _cache_roots() -> list[Path]:
@@ -53,14 +111,59 @@ def _cache_roots() -> list[Path]:
 
 SPLITS = {"full": "mbpp.jsonl", "sanitized": "sanitized-mbpp.json"}
 
+# Not an MBPP split. HumanEval is here as a second benchmark with a thicker suite -
+# ~7.7 asserts per problem against MBPP's exactly 3 - because "three asserts is too
+# thin" and "assert-based acceptance is thin" are different claims and MBPP alone
+# cannot separate them. Committed to `data/` by `scripts/convert_humaneval.py`.
+HUMANEVAL_FILE = Path(__file__).resolve().parent.parent / "data" / "humaneval.jsonl"
+
 
 def find_file(split: str = "full") -> Path | None:
+    if split == "humaneval":
+        return HUMANEVAL_FILE if HUMANEVAL_FILE.exists() else None
     name = SPLITS[split]
     for root in _cache_roots():
         hits = sorted((root / CACHE_DIR_NAME).glob(f"snapshots/*/data/{name}"))
         if hits:
             return hits[0]
     return None
+
+
+def _load_humaneval(limit: int | None) -> list[Problem]:
+    """HumanEval as `Problem`s. Four fields do not line up with MBPP's and each is a trap.
+
+    `canonical_solution` is only the function *body* - the signature and docstring live
+    in `prompt`, so the solution has to be reassembled or it is a syntax error. `task_id`
+    is the string "HumanEval/0". The suite is one `def check(candidate)` blob that has to
+    be followed by a call to actually run. And the name under test is given explicitly
+    rather than being readable from the asserts.
+    """
+    out: list[Problem] = []
+    for line in HUMANEVAL_FILE.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        r = json.loads(line)
+        if "_provenance" in r:  # header record written by the converter
+            continue
+        entry = r["entry_point"]
+        out.append(
+            Problem(
+                task_id=int(str(r["task_id"]).rsplit("/", 1)[-1]),
+                text=r["prompt"],
+                code=r["prompt"] + r["canonical_solution"],
+                # The blob defines `check`; nothing calls it. Without the second element
+                # every candidate "passes" by running no assertions at all - a 0% false
+                # accept rate that means the tests never executed.
+                test_list=(r["test"], f"check({entry})"),
+                test_setup_code="",
+                challenge_test_list=(),
+                source="humaneval",
+                named_entry_point=entry,
+            )
+        )
+        if limit and len(out) >= limit:
+            break
+    return out
 
 
 # Kept for the original call sites; `find_file` is the general form.
@@ -77,6 +180,14 @@ def load(limit: int | None = None, split: str = "full") -> list[Problem]:
     subset accepts wrong code at the same rate, hand-verification did not fix what
     three asserts cannot express.
     """
+    if split == "humaneval":
+        if not HUMANEVAL_FILE.exists():
+            raise FileNotFoundError(
+                f"{HUMANEVAL_FILE} is missing.\n"
+                "Rebuild it:  python scripts/convert_humaneval.py  (needs pyarrow)"
+            )
+        return _load_humaneval(limit)
+
     if split not in SPLITS:
         raise ValueError(f"unknown split {split!r}; expected one of {sorted(SPLITS)}")
     path = find_file(split)
