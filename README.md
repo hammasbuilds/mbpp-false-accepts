@@ -2,6 +2,7 @@
 <p align="center"><i>MBPP gives each problem three assert statements. Three asserts accept a lot of wrong code.</i></p>
 
 <p align="center">
+  <a href="https://github.com/hammasbuilds/mbpp-false-accepts/actions/workflows/ci.yml"><img src="https://github.com/hammasbuilds/mbpp-false-accepts/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="python">
   <img src="https://img.shields.io/badge/runtime%20deps-0-brightgreen" alt="zero dependencies">
   <img src="https://img.shields.io/badge/tests-26-brightgreen" alt="tests">
