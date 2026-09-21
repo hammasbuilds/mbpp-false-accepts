@@ -9,6 +9,12 @@
 </p>
 
 <p align="center">
+  <a href="#the-result">The result</a> &middot;
+  <a href="#what-that-looks-like">What that looks like</a> &middot;
+  <a href="#hand-verification-does-not-fix-it">Hand-verification</a> &middot;
+  <a href="#run-it">Run it</a> &middot;
+  <a href="#input">Input</a> &middot;
+  <a href="#output">Output</a> &middot;
   <a href="docs/METHOD.md">Method</a> &middot;
   <a href="docs/RESULTS.md">Results</a>
 </p>
@@ -194,13 +200,93 @@ behaviour - the same mutant with a guard clause would have survived.
 Exactly one reference solution fails its own tests: task 180 asserts float equality on a
 haversine distance.
 
-## Running it
+## Run it
 
 ```bash
 python run_mutation.py                     # all 974, no model needed
 python run_mutation.py --split sanitized   # the 427 hand-verified problems
 python run_model.py                        # generated solutions, needs Ollama
+pytest -q                                  # 26 tests, no network, no dataset needed
 ```
 
 Zero runtime dependencies. The dataset is a local JSONL, mutation is stdlib `ast`, and
-execution is stdlib `subprocess`.
+execution is stdlib `subprocess`. Every figure in this README is recomputed by those two
+scripts from `results/*.jsonl`; nothing is typed by hand.
+
+---
+
+## Input
+
+![input](docs/images/input.png)
+
+## Output
+
+![output](docs/images/output.png)
+
+*Three asserts are the entire specification, and three separate one-line mutations of this
+function pass all of them. Every test value is either composite with a small divisor or too
+small to enter the loop, so the inverted condition reaches the same answer by the opposite
+route — and the surviving mutant calls every prime above 3 composite.*
+
+---
+
+## Also worth reading
+
+| | |
+|---|---|
+| &#128202; **[Results](docs/RESULTS.md)** | Full tables, both splits, per-kind survival, the model arm |
+| &#128269; **[Method](docs/METHOD.md)** | Mutation operators, the sandbox, how a separating input is found |
+| &#128190; **[Raw output](results/)** | Every mutant and its verdict, as JSONL |
+
+Related, and reaching the same conclusion from other directions:
+
+| | |
+|---|---|
+| **[code-llm-lab](https://github.com/hammasbuilds/code-llm-lab)** | Model-written test suites kill **93.4%** of these mutants against MBPP's own 85.0% |
+| **[code-eval-harness](https://github.com/hammasbuilds/code-eval-harness)** | The same generations score 0% or 94% depending only on how code is extracted |
+| **[swebench-localization](https://github.com/hammasbuilds/swebench-localization)** | Half of SWE-bench is a retrieval problem wearing a reasoning problem's clothes |
+
+---
+
+## Layout
+
+```
+src/data.py           load both splits from the local HF cache
+src/mutate.py         single-point AST mutation: compare, binop, const, negate_if, boolop
+src/sandbox.py        subprocess execution with a timeout; pass / fail / error / timeout
+src/differential.py   searches for a separating input between reference and mutant
+run_mutation.py       the mutation arm - no model needed
+run_model.py          the generated-solutions arm - needs Ollama
+tests/                26 tests, no network, no dataset, no model
+results/              every mutant and verdict as JSONL, plus run logs
+docs/                 method and full results
+```
+
+## Stack
+
+`Python 3.11+` &middot; `ast` (stdlib) &middot; `subprocess` (stdlib) &middot;
+`urllib` (stdlib) &middot; `qwen2.5-coder:14b` via `Ollama` &middot; `pytest` &middot;
+`ruff` &middot; `GitHub Actions` &middot; dataset via `Hugging Face Hub`
+
+**Zero runtime dependencies** is a deliberate property, not an accident: a claim about a
+benchmark's weakness should not itself depend on a stack of libraries a reader has to trust.
+
+## Keywords
+
+MBPP &middot; mutation testing &middot; differential testing &middot; test adequacy
+&middot; false accepts &middot; equivalent mutants &middot; code generation benchmark
+&middot; benchmark evaluation &middot; LLM evaluation &middot; pass@k &middot; test suite
+quality &middot; kill rate &middot; separating input &middot; program equivalence
+&middot; reproducible benchmarks &middot; qwen2.5-coder
+
+## References
+
+Austin, J., Odena, A., Nye, M., Bosma, M., Michalewski, H., Dohan, D., Jiang, E., Cai, C.,
+Terry, M., Le, Q., & Sutton, C. **Program Synthesis with Large Language Models.** *2021.*
+
+&#9888; Citation written from the standard reference - confirm against the paper before
+relying on it.
+
+## Licence
+
+MIT - see [LICENSE](LICENSE).
