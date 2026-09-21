@@ -122,8 +122,11 @@ is the expensive half.
 - **Whether MBPP's reference solutions are right.** They are the oracle here. Where a
   reference is wrong, a "wrong" mutant may be right; the reference is taken as the
   definition of intended behaviour, not as ground truth about the task description.
-- **Other benchmarks.** HumanEval's suites are larger; whether this holds there is
-  untested.
-- **The sanitized split.** MBPP ships a hand-verified subset, `sanitized-mbpp.json`,
-  which is the fairer target for a "how good is MBPP" claim and is not used here.
+- **Benchmarks beyond these two.** HumanEval is measured as a second source and its
+  suites are roughly twice the size; EvalPlus, which extends exactly those suites further,
+  is the obvious next step and is not run here.
+- **Whether HumanEval's suites are comparable in kind, not just in count.** They are
+  hand-written per problem rather than drawn from a template, so "7.2 asserts" and "3
+  asserts" differ in more than number and the comparison bounds the effect rather than
+  isolating it.
 - **Anything about a model's ability.** Arm 2 measures the benchmark, not the model.

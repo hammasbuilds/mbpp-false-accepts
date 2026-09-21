@@ -2,8 +2,9 @@
 
 [<- back to README](../README.md) &middot; [Method](METHOD.md)
 
-All numbers from `results/full_split.log` and `results/sanitized_split.log`, reproducible
-with `python run_mutation.py [--split sanitized]`. No model needed for this arm.
+All numbers from `results/full_split.log`, `results/sanitized_split.log` and
+`results/humaneval_mutation.log`, reproducible with
+`python run_mutation.py [--split sanitized|humaneval]`. No model needed for this arm.
 
 ## Arm 1 - mutation
 
@@ -60,6 +61,38 @@ where it was. The `compare` survival rate is identical to within a tenth of a po
 
 Reviewing an assert can catch an assert that is *wrong*. It cannot add the fourth assert
 that would pin down the boundary, and that is what is missing.
+
+### HumanEval (164 problems, ~7.2 asserts each)
+
+The sanitized split tests whether *review* fixes it. This tests whether *size* does. Every
+MBPP problem has exactly three asserts, so MBPP alone cannot separate "three is too few"
+from "example-based acceptance is too weak"; HumanEval's suites average 7.2 asserts and
+reach 26.
+
+```
+reference solutions passing their own tests: 164/164
+mutants run       : 1104
+SURVIVED (passed) :  126  (11.4%)
+PROVEN WRONG      :   36  (28.6% of survivors) = 3.3% of all mutants
+```
+
+| | MBPP full | MBPP sanitized | HumanEval |
+|---|---:|---:|---:|
+| asserts per problem | 3 | 3 | 7.2 avg |
+| references passing own tests | 973/974 | 427/427 | 164/164 |
+| survival | 17.6% | 16.0% | **11.4%** |
+| provably wrong, of all mutants | 8.6% | 7.3% | **3.3%** |
+| problems with ≥1 proven-wrong survivor | 29.0% | 22.9% | **12.9%** |
+| `compare` survival | 25.9% | 25.8% | **14.7%** |
+| `const` survival | 25.3% | 22.8% | **15.6%** |
+| suites killing nothing | 0.9% | 0.9% | 0.6% |
+| suites killing everything | 56.6% | 63.7% | 63.2% |
+
+Size is the lever review is not. Doubling the asserts halves the provably-wrong rate, where
+hand-verifying them moved it by a point. But it does not close: 36 mutants still pass with a
+witness attached, and `compare` remains the top survivor in every column - the off-by-one at
+a boundary is what example-based asserts are structurally worst at, and more examples of the
+same kind narrow that without removing it.
 
 ## By mutation kind
 
@@ -132,9 +165,9 @@ equals `num`. The single input that separates `>=` from `>` never appears.
 `greater_specificnum([1, 2, 3, 4], 1)` is `True` for the reference and `False` for the
 mutant.
 
-## Two harness bugs that produced false findings
+## Harness bugs that produced false findings
 
-Both were caught by checking a surprising number instead of reporting it.
+All were caught by checking a surprising number instead of reporting it.
 
 **Newline translation.** `Path.write_text` on Windows rewrites LF as CRLF, and MBPP source
 already containing CRLF became CR CR LF - which turns a backslash line-continuation into a
@@ -146,6 +179,29 @@ problems define a class in the solution (`class Node`) that setup then instantia
 
 Together these made five reference solutions look broken. Exactly one is: **task 180**,
 which asserts float equality on a haversine distance.
+
+**A starved witness search, which would have produced a false comparison.** Adding HumanEval
+first gave it a proven-wrong rate of 1.1% against MBPP's 8.6% - readable as "HumanEval's
+mutants are mostly equivalent, so its suites are not really stronger". They are not. The
+separating-input search mines candidate arguments from each assert string it is handed, and
+HumanEval packs its entire suite into one `def check(candidate)` blob: one seed input, where
+MBPP's three separate asserts give three. Unpacking the blob into its individual asserts took
+the rate to 4.4% on the same 25 problems, and 3.3% over all 164.
+
+Nothing raised an exception in either version. The difference between the two numbers was
+entirely how the two datasets happen to store their asserts, and the wrong one would have
+been a claim about test suites rather than about a parser.
+
+Three further HumanEval adapter traps were caught before they produced a number, each of
+which fails silently rather than loudly:
+
+- its asserts call the function through the parameter name `candidate`, so reading the
+  entry point out of the asserts yields a name present in no solution - and the witness
+  search, given it, separates nothing and calls every survivor equivalent
+- the `check` blob defines a function nothing calls, so without an appended `check(fn)` every
+  candidate passes having asserted nothing: a 0% false-accept rate meaning the tests never ran
+- `canonical_solution` is the function *body* only; the signature and docstring live in
+  `prompt` and have to be reassembled before it will parse
 
 ## Arm 2 - solutions a model actually wrote
 
