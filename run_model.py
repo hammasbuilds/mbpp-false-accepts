@@ -21,7 +21,7 @@ opinion about which is correct. That is the finding, and it is weaker and more h
 
     python run_model.py                    # all 974
     python run_model.py --limit 50         # quick
-    python run_model.py --model qwen2.5-coder:3b
+    python run_model.py --model qwen2.5:14b-instruct
 """
 
 from __future__ import annotations
@@ -105,14 +105,18 @@ def main() -> int:
     ap.add_argument("--model", default="qwen2.5-coder:14b")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--gen-workers", type=int, default=8)
-    ap.add_argument("--split", choices=["full", "sanitized", "humaneval"], default="full")
+    ap.add_argument(
+        "--split",
+        choices=["full", "sanitized", "humaneval", "humanevalplus"],
+        default="full",
+    )
     args = ap.parse_args()
 
     probs = [p for p in load(limit=args.limit, split=args.split) if p.entry_point]
     print(f"problems: {len(probs)}  model: {args.model}  split: {args.split}")
     # Every headline below names the benchmark. Hardcoding "MBPP" would print it over
     # HumanEval's numbers too, and the reader has no way to tell which one ran.
-    bench = "HumanEval" if args.split == "humaneval" else "MBPP"
+    bench = {"humaneval": "HumanEval", "humanevalplus": "EvalPlus"}.get(args.split, "MBPP")
 
     OUT.mkdir(parents=True, exist_ok=True)
     tag = args.model.replace(":", "_").replace("/", "_")

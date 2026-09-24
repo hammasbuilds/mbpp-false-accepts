@@ -43,10 +43,11 @@ def main() -> int:
     ap.add_argument("--limit", type=int)
     ap.add_argument(
         "--split",
-        choices=["full", "sanitized", "humaneval"],
+        choices=["full", "sanitized", "humaneval", "humanevalplus"],
         default="full",
         help="sanitized is the 427 the authors hand-verified; "
-        "humaneval is a second benchmark with ~7 asserts per problem instead of 3",
+        "humaneval has ~7 asserts per problem instead of 3; humanevalplus keeps the same "
+        "problems and replaces the asserts with ~775 generated test cases",
     )
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--per-problem", type=int, default=MUTANTS_PER_PROBLEM)
@@ -142,6 +143,11 @@ def main() -> int:
     return 0
 
 
+def _bench(split: str) -> str:
+    """The benchmark's name, so a headline never prints "MBPP" over another split's numbers."""
+    return {"humaneval": "HumanEval", "humanevalplus": "EvalPlus"}.get(split, "MBPP")
+
+
 def report(rows: list[dict], usable, split: str = "full") -> None:
     n = len(rows)
     survived = [r for r in rows if r["survived"]]
@@ -149,7 +155,10 @@ def report(rows: list[dict], usable, split: str = "full") -> None:
 
     # The headline names the suite being measured. Leaving "MBPP's 3 asserts" hardcoded
     # would print it over HumanEval's numbers too, and a reader has no way to tell.
-    suite = "HumanEval's ~7 asserts" if split == "humaneval" else "MBPP's 3 asserts"
+    suite = {
+        "humaneval": "HumanEval's ~7 asserts",
+        "humanevalplus": "EvalPlus's ~775 test cases",
+    }.get(split, "MBPP's 3 asserts")
     print("\n" + "=" * 70)
     print(f"MUTATION SURVIVAL - wrong code that {suite} accept")
     print("=" * 70)
@@ -207,7 +216,7 @@ def report(rows: list[dict], usable, split: str = "full") -> None:
         )
         print(
             f"\n    => {len(proven) / n:.1%} of all mutants are provably wrong programs "
-            f"that {'HumanEval' if split == 'humaneval' else 'MBPP'} accepts"
+            f"that {_bench(split)} accepts"
         )
         print("\n    witnesses:")
         for r in proven[:6]:
