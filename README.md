@@ -10,9 +10,9 @@
 </p>
 
 <p align="center">
-  <a href="#the-result">The result</a> &middot;
+  <a href="#results">Results</a> &middot;
   <a href="#what-that-looks-like">What that looks like</a> &middot;
-  <a href="#hand-verification-does-not-fix-it">Hand-verification</a> &middot;
+  <a href="#hand-verification">Hand-verification</a> &middot;
   <a href="#how-much-testing-would-it-take-more-than-anyone-writes">The curve</a> &middot;
   <a href="#run-it">Run it</a> &middot;
   <a href="#input">Input</a> &middot;
@@ -27,7 +27,7 @@ A benchmark's pass rate only means something if passing implies correct. MBPP sp
 each of its 974 problems with exactly three `assert` statements. This measures how much
 wrong code three asserts let through.
 
-## The result
+## Results
 
 Take each reference solution MBPP calls correct, change exactly one thing - flip a
 comparison, swap an operator, nudge a constant - and run the same three asserts.
@@ -102,7 +102,7 @@ witness: greater_specificnum([1, 2, 3, 4], 1)   reference -> True   mutant -> Fa
 
 **Seven problems have suites that killed nothing at all.**
 
-## Hand-verification does not fix it
+## Hand-verification
 
 MBPP ships a **sanitized** split: 427 problems the authors reviewed by hand, with revised
 asserts. It is the fairer target for any claim about MBPP's quality, so the same
