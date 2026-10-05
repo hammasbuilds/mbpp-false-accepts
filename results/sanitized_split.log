@@ -55,4 +55,4 @@ MUTATION SURVIVAL - wrong code that MBPP's 3 asserts accept
       task   56  f(1)
               reference ('ok', 'True')   mutant ('ok', 'False')
 
-wrote D:\github\mbpp-false-accepts\results\mutation_sanitized.jsonl
+wrote C:\src\mbpp-false-accepts\results\mutation_sanitized.jsonl
